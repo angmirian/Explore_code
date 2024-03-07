@@ -1,6 +1,5 @@
-# 2022-03-31 AndyP
 # mixed_by model building for AIC comparison
-# Last modified by Angela I Sep 2023 for Explore group comparisons
+# Last modified by Angela I Feb 2024
 # Mixed by runs an MLM at each time point
 # ddf is the output structure; reml and ml are two different convergence methods (use reml - contains AIC and BIC and log likelihood)
 # ddf$coeff_df_reml - has all fixed and random effects; value is the estimate and estimated error is std.error
