@@ -153,7 +153,7 @@ subcortical_df <- subcortical_df %>% rename(sub_decon = decon_mean)
 cortical_df <- cortical_df %>% rename(sub_decon = decon_mean)
 
 trial_df <- trial_df %>% 
-    group_by(id, run) %>% 
+    group_by(id, run, run_trial) %>% 
       mutate(v_max_lead_sc = lead(v_max_wi),
              iti_sc = scale(iti_ideal),
              rt_csv_lag_sc = lag(rt_csv_sc),
