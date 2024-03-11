@@ -152,7 +152,7 @@ subcortical_df <- subcortical_df %>% rename(sub_decon = decon_mean)
 cortical_df <- cortical_df %>% rename(sub_decon = decon_mean)
 
 trial_df <- trial_df %>% 
-    group_by(id, run, run_trial) %>% 
+    group_by(id, run) %>% arrange_by(run_trial) %>%
       mutate(v_max_lead_sc = lead(v_max_wi),
              iti_sc = scale(iti_ideal),
              rt_csv_lag_sc = lag(rt_csv_sc),
@@ -257,7 +257,7 @@ if (do_vPFC_HC) {
                                             atlas_value==230 ~ 'AH'))
   hc <- hc %>% select(!atlas_value)
   #Average HC signal
-  hc <- hc %>% group_by(id,run,run_trial,evt_time,HC_region) %>% summarize(decon1 = mean(decon_mean,na.rm=TRUE)) %>% ungroup() # 12 -> 2  
+  hc <- hc %>% group_by(id,run,trial,evt_time,HC_region) %>% summarize(decon1 = mean(decon_mean,na.rm=TRUE)) %>% ungroup() # 12 -> 2  
   hc <- hc %>% rename(decon_mean=decon1)
   hc <- hc %>% group_by(id,run) %>% mutate(HCwithin = scale(decon_mean),HCbetween=mean(decon_mean,na.rm=TRUE)) %>% ungroup()
   Q <- Q %>% filter(evt_time > -3 & evt_time < 3) #cut from 4 to +/-3 on 6/2/23
