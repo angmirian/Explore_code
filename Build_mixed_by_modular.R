@@ -1,5 +1,5 @@
 # Modular code to run mixed_by
-# 26 April 2024
+# 26 April 2024; last updated 1/28/2025 - had to add back the HC directories for cobra data, seemed to have been deleted?
 # Angela Ianni
 
 # Mixed by runs an MLM at each time point
@@ -13,25 +13,26 @@ library(pracma)
 library(wesanderson)
 library(tidyverse)
 library(data.table) 
+library(formula.tools)
 
 ########## User Settings ##########
-align_to = "response" #options are clock or response
-structure = "network"
+align_to = "clock" #options are clock or response
+structure = "network" #this is how you can tell it how to structurally group the data
 region_to_run = "subcortical" #options are cortical (vmPFC) and subcortical
 subjs_to_run = "patients_only" #options are all, controls_only, patients_only, or attempters_only
-trial_data = ("/Users/angela/Documents/Research/Explore/Medusa_analysis/trial_df_03282023.rds")
-subject_demographics = ("/Users/angela/Documents/Research/Explore/Medusa_analysis/explore_complete_demographics.rds")
+trial_data = ("/Users/angela/Documents/Work/Explore/Medusa_analysis/trial_df_03282023.rds")
+subject_demographics = ("/Users/angela/Documents/Work/Explore/Medusa_analysis/explore_complete_demographics.rds")
+factor_scores = ("~/OneDrive - UPMC/Documents/Research/Explore_Project/Impulsivity/FactorAnalysis_withTim/fscores.csv")
 excludes = c(207224, 210374, 210701, 213708, 216806, 216845, 219392, 220024, 221698, 440149, 440311, 440336) #imaging QC excludes (excluded in original anlaysis); excludes = c(207224, 210374, 210701, 213708, 216806, 216845, 219392, 220024, 221698, 440149, 440311, 440336, 211253, 431100, 440243, 440254, 440263, 440392, 221292, 221637, 220913, 431224) #imaging QC excludes, imaging questional QCs, behavioral flatliners, 2 subjs with really long runs
-select_networks=TRUE #can only set to TRUE for subcortical; if true only do Cont, Default, Limbic, hipp, and amygdala
-if (region_to_run=="cortical") {
+select_networks=TRUE #can only set to TRUE for subcortical; if true only do Cont, Default, Limbic, hipp, and amygdala (otherwise will also do SalVentAttn and SomMot networks)
+if (region_to_run=="cortical") { #selecting networks is not applicable for vPFC analyses, so I set it back to false in that case
   select_networks=FALSE
 }
-
-filter_first_10_trials=FALSE #to match what Andrew did - NOPE, NOT WHAT HE DID; IGNORE THIS
+filter_first_10_trials=FALSE #Allows you to filter the first 10 trials e.g. for when running entropy analyses
 
 ncores = 3 #I have 8 total on my laptop; put 1 less than total cores on machine or else it will slow down
-source("/Users/angela/Documents/Research/Scripts/fmri.pipeline/R/mixed_by.R")
-setwd("/Users/angela/Documents/Research/Explore/Medusa_analysis")
+source("/Users/angela/Documents/Work/Scripts/fmri.pipeline/R/mixed_by.R")
+setwd("/Users/angela/Documents/Work/Explore/Medusa_analysis")
 #Define how output files are named
 if (subjs_to_run=="all") {
   if (select_networks==TRUE) {
@@ -57,42 +58,22 @@ if (region_to_run=="cortical" && select_networks==TRUE) {select_networks=FALSE
 }
 
 ########## Read in models to run ##########
+#Create txt files with your MLM models and load them here
 if (align_to=="clock") {
-  if (subjs_to_run=="all") {
-    models<-read.table("/Users/angela/Documents/Research/Explore/Medusa_analysis/Decode_formulas/clock_decode_formulas_6June2024_impulsivity.txt")
-    #models<-read.table("/Users/angela/Documents/Research/Explore/Medusa_analysis/Decode_formulas/clock_decode_formulas_1May2024.txt")
-  } else if (subjs_to_run=="controls_only") {
-    models<-read.table("/Users/angela/Documents/Research/Explore/Medusa_analysis/Decode_formulas/clock_decode_formulas_6June2024_impulsivity.txt")
-  } else if (subjs_to_run=="patients_only") {
-    models<-read.table("/Users/angela/Documents/Research/Explore/Medusa_analysis/Decode_formulas/clock_decode_formulas_7Aug2024_lackofperseveration_contientiousness.txt")
-  } else if (subjs_to_run=="attempters_only") {
-    models<-read.table("/Users/angela/Documents/Research/Explore/Medusa_analysis/Decode_formulas/response_decode_formulas_6June2024_impulsivity.txt")
-  }
-
+    models<-read.table("/Users/angela/Documents/Work/Explore/Medusa_analysis/Decode_formulas/clock_decode_formulas_11Nov2025_impulsivity_factorscores.txt")
 } else if (align_to=="response") {
-  if (subjs_to_run=="all") {
-    models<-read.table("/Users/angela/Documents/Research/Explore/Medusa_analysis/Decode_formulas/feedback_decode_formulas_6June2024_impulsivity.txt")
-    #models<-read.table("/Users/angela/Documents/Research/Explore/Medusa_analysis/Decode_formulas/feedback_decode_formulas_1May2024.txt")
-  } else if (subjs_to_run=="controls_only") {
-    models<-read.table("/Users/angela/Documents/Research/Explore/Medusa_analysis/Decode_formulas/feedback_decode_formulas_6June2024_impulsivity.txt")
-  } else if (subjs_to_run=="patients_only") {
-    models<-read.table("/Users/angela/Documents/Research/Explore/Medusa_analysis/Decode_formulas/feedback_decode_formulas_7Aug2024_lackofperseveration_contientiousness.txt")
-  } else if (subjs_to_run=="attempters_only") {
-    models<-read.table("/Users/angela/Documents/Research/Explore/Medusa_analysis/Decode_formulas/feedback_decode_formulas_6June2024_lethality.txt")
-  }
+    models<-read.table("/Users/angela/Documents/Work/Explore/Medusa_analysis/Decode_formulas/feedback_decode_formulas_11Nov2025_impulsivity_factorscores.txt")
 }
 decode_formula = list()
 for (i in 1:length(models$V1)) {
   decode_formula[[i]] <- formula(models$V1[[i]])
 }
   
-
-
 ########## Load trial and demographic data ##########
 trial_df <- readRDS(trial_data)
 trial_df$id <- as.integer(sub("_1", "", trial_df$id))
-load('/Users/angela/Documents/Research/Explore/Medusa_analysis/combined_rs_betas.Rda')
-# Recode omissions as -0.5 and 0.5 and code the condition trial (more similar to bsocial run_trial)
+load('/Users/angela/Documents/Work/Explore/Medusa_analysis/combined_rs_betas.Rda')
+# Recode omissions as -0.5 and rewards as 0.5 and code the condition trial (more similar to bsocial run_trial)
 trial_df <- trial_df %>% 
   group_by(id,run_number) %>% 
   arrange(id, run_number, trial) %>% 
@@ -102,8 +83,11 @@ trial_df <- trial_df %>%
          condition_trial_neg_inv_sc = as.vector(scale(condition_trial_neg_inv)),
   ) %>% ungroup()
 demos <- readRDS(subject_demographics)
+#load factor scores and merge with demos
+imp_factors <- read.csv(factor_scores)
+demos <- demos %>% left_join(imp_factors, by="id")
 #Merge demos and trial_df
-trial_df <- trial_df %>% left_join(demos, by="id")
+trial_df <- trial_df %>% left_join(demos, by="id") 
 #Merge WSLS behavior and trial_df
 wsls_df <- combined_rs_betas %>% select(id,WSLS_rs,LS_rs)
 wsls_df$id <- as.integer(wsls_df$id)
@@ -126,48 +110,51 @@ trial_df <- trial_df %>%
          pe_max_lag_sc = scale(pe_max_lag),
          abs_pe_max_lag_sc = scale(abs(pe_max_lag)),
          rt_csv_lag_sc = lag(rt_csv_sc),
+         rt_lead = lead(rt_csv), 
+         rt_change_lag = rt_csv-rt_lag,
+         rt_change_lead = rt_lead-rt_csv,
+         rt_change_lag_sc = scale(rt_change_lag),
+         rt_change_lead_sc = scale(rt_change_lead),
+         abs_rt_change_lag_sc = scale(abs(rt_change_lag)),
+         abs_rt_change_lead_sc = scale(abs(rt_change_lead)),
          iti_prev_sc = lag(iti_sc)) %>% ungroup
-
-
 
 ########## Load Schaeffer Labels ########## 
 #Note: adjusted: (region 191 changed from Default to Limbic for symmetry)
-labels <- read_csv("/Users/angela/Documents/Research/Explore/fMRI/Dec2022/extracted_values/12Dec2022/region_labels_244.csv") %>% mutate(roi_num = as.numeric(roi_num)) %>% inner_join(read_csv("/Users/angela/Documents/Research/Explore/fMRI/Dec2022/extracted_values/12Dec2022/region_lookup_244.csv"), by = "roi_num")
+labels <- read_csv("/Users/angela/Documents/Work/Explore/fMRI/Dec2022/extracted_values/12Dec2022/region_labels_244.csv") %>% mutate(roi_num = as.numeric(roi_num)) %>% inner_join(read_csv("/Users/angela/Documents/Work/Explore/fMRI/Dec2022/extracted_values/12Dec2022/region_lookup_244.csv"), by = "roi_num")
 labels <- labels %>% mutate(atlas_value = as.numeric(roi_num))
 
-# label missing networks as amygdala, hippocampus, thalamus
+# label missing networks as amygdala, hippocampus, thalamus (otherwise the network is called NA for all of these regions)
 labels$network[str_detect(labels$subregion, regex("Hippocampus", ignore_case=TRUE))] <- "Hippocampus"
 labels$network[str_detect(labels$subregion, regex("BLA", ignore_case=TRUE))] <- "Amygdala"
 labels$network[str_detect(labels$subregion, regex("CMN", ignore_case=TRUE))] <- "Amygdala"
 labels$network[str_detect(labels$subregion, regex("Thalamus", ignore_case=TRUE))] <- "Thalamus"
 
-
-
 ########## Load Medusa Data ########## 
 #Define data location
-subcortical_cache_dir="/Users/angela/Documents/Research/Explore/Medusa_analysis/subcortical"
-cortical_cache_dir="/Users/angela/Documents/Research/Explore/Medusa_analysis/cortical"
+subcortical_cache_dir="/Users/angela/Documents/Work/Explore/Medusa_analysis/subcortical"
+cortical_cache_dir="/Users/angela/Documents/Work/Explore/Medusa_analysis/cortical"
 if (align_to=="clock") {
   print("aligning to clock")
-  HCmedusa_data = c("/Users/angela/Documents/Research/Explore/Medusa_analysis/Medusa_data/12slice_cobra_hippocampus_mask/Explore_HC_l_clock.csv.gz",
-                  "/Users/angela/Documents/Research/Explore/Medusa_analysis/Medusa_data/12slice_cobra_hippocampus_mask/Explore_HC_r_clock.csv.gz")
-  subcortical_data = "/Users/angela/Documents/Research/Explore/Medusa_analysis/subcortical/clock_aligned_striatum_hipp_thalamus.csv.gz"
-  cortical_data = "/Users/angela/Documents/Research/Explore/Medusa_analysis/cortical/clock_aligned_200_vmpfc.csv.gz"
+  HCmedusa_data = c("/Users/angela/Documents/Work/Explore/Medusa_analysis/Medusa_data/12slice_cobra_hippocampus_mask/Explore_HC_l_clock.csv.gz",
+                    "/Users/angela/Documents/Work/Explore/Medusa_analysis/Medusa_data/12slice_cobra_hippocampus_mask/Explore_HC_r_clock.csv.gz")
+  subcortical_data = "/Users/angela/Documents/Work/Explore/Medusa_analysis/subcortical/clock_aligned_striatum_hipp_thalamus.csv.gz"
+  cortical_data = "/Users/angela/Documents/Work/Explore/Medusa_analysis/cortical/clock_aligned_200_vmpfc.csv.gz"
 } else if (align_to=="response") {
   print("aligning to response")
-  HCmedusa_data = c("/Users/angela/Documents/Research/Explore/Medusa_analysis/Medusa_data/12slice_cobra_hippocampus_mask/Explore_HC_l_fb.csv.gz",
-                  "/Users/angela/Documents/Research/Explore/Medusa_analysis/Medusa_data/12slice_cobra_hippocampus_mask/Explore_HC_r_fb.csv.gz")
-  subcortical_data = "/Users/angela/Documents/Research/Explore/Medusa_analysis/subcortical/rt_aligned_striatum_hipp_thalamus.csv.gz"
-  cortical_data = "/Users/angela/Documents/Research/Explore/Medusa_analysis/cortical/rt_aligned_200_vmpfc.csv.gz"
+  HCmedusa_data = c("/Users/angela/Documents/Work/Explore/Medusa_analysis/Medusa_data/12slice_cobra_hippocampus_mask/Explore_HC_l_fb.csv.gz",
+                    "/Users/angela/Documents/Work/Explore/Medusa_analysis/Medusa_data/12slice_cobra_hippocampus_mask/Explore_HC_r_fb.csv.gz")
+  subcortical_data = "/Users/angela/Documents/Work/Explore/Medusa_analysis/subcortical/rt_aligned_striatum_hipp_thalamus.csv.gz"
+  cortical_data = "/Users/angela/Documents/Work/Explore/Medusa_analysis/cortical/rt_aligned_200_vmpfc.csv.gz"
 }
 #Load the data
 if (region_to_run=="cortical") {
   cortical_df = fread(cortical_data)
-  cortical_df$id <- gsub(x = cortical_df$id, pattern='881224',replacement='431224')
+  #fix coding for these subjects
+  cortical_df$id <- gsub(x = cortical_df$id, pattern='881224',replacement='431224') 
   cortical_df$id <- gsub(x = cortical_df$id, pattern='881230',replacement='431230')
-  vmpfc_roi_list <- c(55,56,65,66,67,84,86,88,89,159,160,161,170,171,191,192,194)
+  vmpfc_roi_list <- c(55,56,65,66,67,84,86,88,89,159,160,161,170,171,191,192,194) #define while ROIs in the Schaeffer atlas correspond to the vmPPFC
   cortical_df <- cortical_df %>% filter(atlas_value %in% vmpfc_roi_list)
-  cortical_df <- cortical_df
   #fix how run is coded
   cortical_df <- cortical_df %>% mutate(run = case_when(
     str_detect(run, regex("run1", ignore_case=TRUE)) ~ 1,
@@ -176,11 +163,11 @@ if (region_to_run=="cortical") {
   cortical_df <- cortical_df %>% mutate(trial = as.vector(trial)) %>% mutate(run_trial = case_when(
     trial < 121 ~ trial,
     trial > 120 ~ trial-120L)) # the L tells it that I want it to be an integer vector not a double vector
-  #Filter data +/- 3 sec from event
+  #Filter data +/- 3 sec from event of interest (reduces multiple comparisons; can set to whatever you want)
   cortical_df <- cortical_df %>% filter(evt_time > -3 & evt_time < 3)
   #Merge labels with medusa data
   cortical_df <- cortical_df %>% inner_join(labels, by="atlas_value")
-  #Code the region groupings
+  #Code the region groupings (did this when I wanted to look at response across the entire mPFC)
   cortical_df <- cortical_df %>% mutate(group = as.factor(case_when(
     str_detect(subregion, regex("OFC1", ignore_case=TRUE)) ~ "mPFC",
     str_detect(subregion, regex("OFC2", ignore_case=TRUE)) ~ "mPFC",
@@ -194,13 +181,14 @@ if (region_to_run=="cortical") {
     str_detect(subregion, regex("PFCdPFCm4", ignore_case=TRUE)) ~ "mPFC",
     str_detect(subregion, regex("PFCl1", ignore_case=TRUE)) ~ "mPFC",
     str_detect(subregion, regex("PFCl2", ignore_case=TRUE)) ~ "mPFC")))
-  #Merge trial_df and medusa data
+  #Merge trial_df and medusa data; this takes a while!
   Q <- merge(trial_df, cortical_df, by = c("id", "run", "run_trial")) %>% dplyr::arrange("id","run","run_trial","evt_time") #takes a long time
   Q$decon_mean[Q$evt_time > Q$iti_ideal] = NA
 } else if (region_to_run=="subcortical") {
+  subcortical_df = fread(subcortical_data)
+  # Load in the Cobra hippocampal data (smaller ROI that Schaeffer mask; aligns with Nat Comm hippocampal analysis)
   HCdata1=fread(file.path(HCmedusa_data[1])) # Left; atlas values for HCdata1 and 2 are between 0 and 1
   HCdata2=fread(file.path(HCmedusa_data[2])) # Right
-  subcortical_df = fread(subcortical_data)
   #Average across hippocampus slices for each hemisphere
   avg_Lhipp <- HCdata1 %>% group_by(id,run,trial,evt_time) %>% 
     dplyr::summarize(Lhipp_avg_decon_mean=mean(decon_mean,na.rm=TRUE),
@@ -225,7 +213,7 @@ if (region_to_run=="cortical") {
   subcortical_df <- rbind(subcortical_df, avg_Rhipp)
   rm(HCdata1)
   rm(HCdata2)
-  #Fix ID codings
+  #Fix ID codings for two subjects
   subcortical_df$id <- gsub(x = subcortical_df$id, pattern='881224',replacement='431224')
   subcortical_df$id <- gsub(x = subcortical_df$id, pattern='881230',replacement='431230')
   subcortical_df <- subcortical_df
@@ -281,7 +269,7 @@ if (subjs_to_run=="patients_only") {
 #Filter out networks, if desired
 if (select_networks==TRUE) {
   Q <- Q %>% filter(network %in% network_subset)
-  Q$network <- plyr::revalue(Q$network, c("Hippocampus_cobra" = "Hippocampus"))
+  Q$network <- plyr::revalue(Q$network, c("Hippocampus_cobra" = "Hippocampus")) #didn't end up using schaeffer data so just renamed cobra HC data without the cobra suffix
 }
 
 
@@ -301,15 +289,17 @@ Q$age <- scale(Q$age)
 Q$wtar <- scale(Q$wtar)
 Q$exit <- scale(Q$exit)
 Q$education_yrs <- scale(Q$education_yrs)
-Q$neo_neuroticism <- scale(Q$neo_neuroticism)
-Q$neo_conscientiousness <- scale(Q$neo_conscientiousness)
-Q$pid5_psychoticism <- scale(Q$pid5_psychoticism)
-Q$uppsp_total <- scale(Q$uppsp_total)
-Q$uppsp_negative_urgency <- scale(Q$uppsp_negative_urgency)
-Q$uppsp_positive_urgency <- scale(Q$uppsp_positive_urgency)
-Q$uppsp_lack_of_premeditation <- scale(Q$uppsp_lack_of_premeditation)
-Q$uppsp_lack_of_perseveration <- scale(Q$uppsp_lack_of_perseveration)
-Q$neo_neuroticism <- scale(Q$neo_neuroticism)
+#Q$neo_Neuroticism <- scale(Q$neo_Neuroticism)
+#Q$neo_Conscientiousness <- scale(Q$neo_Conscientiousness)
+#Q$neo_Extraversion <- scale(Q$neo_Extraversion)
+Q$pid5_psychoticism <- scale(Q$pid5_Psychoticism)
+Q$uppsp_total <- scale(Q$upps_total)
+Q$uppsp_negative_urgency <- scale(Q$uppsp_Negative_Urgency)
+Q$uppsp_positive_urgency <- scale(Q$uppsp_Positive_Urgency)
+Q$uppsp_lack_of_premeditation <- scale(Q$uppsp_Premeditation)
+Q$uppsp_lack_of_perseveration <- scale(Q$uppsp_Perseveration)
+Q$ABI <- scale(Q$ABI)
+Q$DIMP <- scale(Q$DIMP)
 Q$drs_total <- scale(Q$drs_total)
 Q$cirsg <- scale(Q$cirsg)
 Q$max_lethality <- scale(Q$max_lethality)
@@ -327,7 +317,7 @@ Q$Group_i <-factor(Q$Group, level = c("Ideators", "Controls", "Depressed", "Atte
 #Fix duplicate trial entries; confirmed they are same with sum(Q$trial.x != Q$trial.y)
 Q$trial <- Q$trial.x 
 Q <- Q %>% select(-c(trial.x,trial.y))
-#Filter out first 10 trials, if desired (to match what Andrew did)
+#Filter out first 10 trials, if desired
 if (filter_first_10_trials==TRUE) {
   Q <- Q %>% filter(trial>10)
 }
