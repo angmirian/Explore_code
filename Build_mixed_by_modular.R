@@ -1,5 +1,5 @@
 # Modular code to run mixed_by
-# 26 April 2024; last updated 1/28/2025 - had to add back the HC directories for cobra data, seemed to have been deleted?
+# 26 April 2024; last updated 12/8/2025 
 # Angela Ianni
 
 # Mixed by runs an MLM at each time point
@@ -18,8 +18,8 @@ library(formula.tools)
 ########## User Settings ##########
 align_to = "clock" #options are clock or response
 structure = "network" #this is how you can tell it how to structurally group the data
-region_to_run = "subcortical" #options are cortical (vmPFC) and subcortical
-subjs_to_run = "patients_only" #options are all, controls_only, patients_only, or attempters_only
+region_to_run = "cortical" #options are cortical (vmPFC) and subcortical
+subjs_to_run = "attempters_only" #options are all, controls_only, patients_only, or attempters_only
 trial_data = ("/Users/angela/Documents/Work/Explore/Medusa_analysis/trial_df_03282023.rds")
 subject_demographics = ("/Users/angela/Documents/Work/Explore/Medusa_analysis/explore_complete_demographics.rds")
 factor_scores = ("~/OneDrive - UPMC/Documents/Research/Explore_Project/Impulsivity/FactorAnalysis_withTim/fscores.csv")
@@ -60,9 +60,9 @@ if (region_to_run=="cortical" && select_networks==TRUE) {select_networks=FALSE
 ########## Read in models to run ##########
 #Create txt files with your MLM models and load them here
 if (align_to=="clock") {
-    models<-read.table("/Users/angela/Documents/Work/Explore/Medusa_analysis/Decode_formulas/clock_decode_formulas_11Nov2025_impulsivity_factorscores.txt")
+    models<-read.table("/Users/angela/Documents/Work/Explore/Medusa_analysis/Decode_formulas/clock_decode_formulas_4Dec2025_scan_ideation.txt")
 } else if (align_to=="response") {
-    models<-read.table("/Users/angela/Documents/Work/Explore/Medusa_analysis/Decode_formulas/feedback_decode_formulas_11Nov2025_impulsivity_factorscores.txt")
+    models<-read.table("/Users/angela/Documents/Work/Explore/Medusa_analysis/Decode_formulas/feedback_decode_formulas_4Dec2025_scan_ideation.txt") #from Explore paper analyses?
 }
 decode_formula = list()
 for (i in 1:length(models$V1)) {
@@ -91,6 +91,7 @@ trial_df <- trial_df %>% left_join(demos, by="id")
 #Merge WSLS behavior and trial_df
 wsls_df <- combined_rs_betas %>% select(id,WSLS_rs,LS_rs)
 wsls_df$id <- as.integer(wsls_df$id)
+demos_wsls <- demos %>% left_join(wsls_df, by="id")
 trial_df <- trial_df %>% left_join(wsls_df, by="id")
 #Remove excluded subjects
 trial_df <- trial_df %>% filter(!id %in% excludes)
@@ -293,7 +294,7 @@ Q$education_yrs <- scale(Q$education_yrs)
 #Q$neo_Conscientiousness <- scale(Q$neo_Conscientiousness)
 #Q$neo_Extraversion <- scale(Q$neo_Extraversion)
 Q$pid5_psychoticism <- scale(Q$pid5_Psychoticism)
-Q$uppsp_total <- scale(Q$upps_total)
+Q$upps_total <- scale(Q$upps_total)
 Q$uppsp_negative_urgency <- scale(Q$uppsp_Negative_Urgency)
 Q$uppsp_positive_urgency <- scale(Q$uppsp_Positive_Urgency)
 Q$uppsp_lack_of_premeditation <- scale(Q$uppsp_Premeditation)
@@ -303,6 +304,7 @@ Q$DIMP <- scale(Q$DIMP)
 Q$drs_total <- scale(Q$drs_total)
 Q$cirsg <- scale(Q$cirsg)
 Q$max_lethality <- scale(Q$max_lethality)
+Q$scan_ideation <- scale(log(Q$scan_ideation))
 Q$ham_hamtotal_17items <- scale(Q$ham_hamtotal_17items)
 Q$beckhopelessness <- scale(Q$beckhopelessness)
 Q$athf <- scale(Q$athf)
