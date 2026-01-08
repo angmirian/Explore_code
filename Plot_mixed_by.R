@@ -13,10 +13,10 @@ library(grid)
 library(viridis)
 
 ########## User Settings ##########
-align_to = "clock" #options are clock or response 
+align_to = "response" #options are clock or response 
 structure = "network" 
 toplot <- "estimate" #options: are estimate and statistic
-region_to_run = "cortical" #options are cortical (vmPFC) and subcortical
+region_to_run = "subcortical" #options are cortical (vmPFC) and subcortical
 subjs_to_run = "patients_only" #options are all, controls_only, and patients_only
 flip_stat = 0 #to flip statistic for plots (i.e. if model set up to look at attempters vs. depressed but you want to flip to see depressed vs. attempters)
 if (align_to=="clock") {
@@ -28,9 +28,9 @@ subcortical_cache_dir = '/Users/angela/Documents/Work/Explore/Medusa_analysis/su
 cortical_cache_dir = '/Users/angela/Documents/Work/Explore/Medusa_analysis/cortical'
 
 if (region_to_run=="cortical") {
-  data_subfolder <- "Impulsivity_updatedNov2025/Patients_only" #"All_participants"
+  data_subfolder <- "Patients_only/Attempters_only/PCA_wCog" 
 } else if(region_to_run=="subcortical") {
-  data_subfolder <- "Selected_subcortical_regions/Impulsivity_updatedNov2025/Patients_only" #Extraversion/Patients_only 
+  data_subfolder <- "Selected_subcortical_regions/Patients_only/Attempters_only/PCA_wCog" 
   }
 
 
