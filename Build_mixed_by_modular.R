@@ -16,12 +16,13 @@ library(data.table)
 library(formula.tools)
 
 ########## User Settings ##########
-align_to = "clock" #options are clock or response
+align_to = "response" #options are clock or response
 structure = "network" #this is how you can tell it how to structurally group the data
-region_to_run = "cortical" #options are cortical (vmPFC) and subcortical
+region_to_run = "subcortical" #options are cortical (vmPFC) and subcortical
 subjs_to_run = "attempters_only" #options are all, controls_only, patients_only, or attempters_only
 trial_data = ("/Users/angela/Documents/Work/Explore/Medusa_analysis/trial_df_03282023.rds")
 subject_demographics = ("/Users/angela/Documents/Work/Explore/Medusa_analysis/explore_complete_demographics.rds")
+demos_pca_file = ("/Users/angela/Documents/Work/Explore/Medusa_analysis/demos_pca_imp_cog.rds") #demos_pca.rds has impulsivity and suicide measures alone
 factor_scores = ("~/OneDrive - UPMC/Documents/Research/Explore_Project/Impulsivity/FactorAnalysis_withTim/fscores.csv")
 excludes = c(207224, 210374, 210701, 213708, 216806, 216845, 219392, 220024, 221698, 440149, 440311, 440336) #imaging QC excludes (excluded in original anlaysis); excludes = c(207224, 210374, 210701, 213708, 216806, 216845, 219392, 220024, 221698, 440149, 440311, 440336, 211253, 431100, 440243, 440254, 440263, 440392, 221292, 221637, 220913, 431224) #imaging QC excludes, imaging questional QCs, behavioral flatliners, 2 subjs with really long runs
 select_networks=TRUE #can only set to TRUE for subcortical; if true only do Cont, Default, Limbic, hipp, and amygdala (otherwise will also do SalVentAttn and SomMot networks)
@@ -60,9 +61,9 @@ if (region_to_run=="cortical" && select_networks==TRUE) {select_networks=FALSE
 ########## Read in models to run ##########
 #Create txt files with your MLM models and load them here
 if (align_to=="clock") {
-    models<-read.table("/Users/angela/Documents/Work/Explore/Medusa_analysis/Decode_formulas/clock_decode_formulas_4Dec2025_scan_ideation.txt")
+    models<-read.table("/Users/angela/Documents/Work/Explore/Medusa_analysis/Decode_formulas/clock_decode_formulas_22Dec2025_pca_wCog.txt")
 } else if (align_to=="response") {
-    models<-read.table("/Users/angela/Documents/Work/Explore/Medusa_analysis/Decode_formulas/feedback_decode_formulas_4Dec2025_scan_ideation.txt") #from Explore paper analyses?
+    models<-read.table("/Users/angela/Documents/Work/Explore/Medusa_analysis/Decode_formulas/feedback_decode_formulas_22Dec2025_pca_wCog.txt") #from Explore paper analyses?
 }
 decode_formula = list()
 for (i in 1:length(models$V1)) {
@@ -83,13 +84,15 @@ trial_df <- trial_df %>%
          condition_trial_neg_inv_sc = as.vector(scale(condition_trial_neg_inv)),
   ) %>% ungroup()
 demos <- readRDS(subject_demographics)
+demos_pca <- readRDS(demos_pca_file) %>% select(id, starts_with("PC"))
 #load factor scores and merge with demos
 imp_factors <- read.csv(factor_scores)
 demos <- demos %>% left_join(imp_factors, by="id")
+demos <- demos %>% left_join(demos_pca, by="id")
 #Merge demos and trial_df
 trial_df <- trial_df %>% left_join(demos, by="id") 
 #Merge WSLS behavior and trial_df
-wsls_df <- combined_rs_betas %>% select(id,WSLS_rs,LS_rs)
+wsls_df <- combined_rs_betas %>% dplyr::select(id,WSLS_rs,LS_rs)
 wsls_df$id <- as.integer(wsls_df$id)
 demos_wsls <- demos %>% left_join(wsls_df, by="id")
 trial_df <- trial_df %>% left_join(wsls_df, by="id")
@@ -304,12 +307,18 @@ Q$DIMP <- scale(Q$DIMP)
 Q$drs_total <- scale(Q$drs_total)
 Q$cirsg <- scale(Q$cirsg)
 Q$max_lethality <- scale(Q$max_lethality)
+Q$max_intent <- scale(Q$max_intent)
+Q$age_at_first_attempt <- scale(Q$age_at_first_attempt)
 Q$scan_ideation <- scale(log(Q$scan_ideation))
 Q$ham_hamtotal_17items <- scale(Q$ham_hamtotal_17items)
 Q$beckhopelessness <- scale(Q$beckhopelessness)
 Q$athf <- scale(Q$athf)
 Q$WSLS_rs <- scale(Q$WSLS_rs)
 Q$LS_rs <- scale(Q$LS_rs)
+Q$PC1 <- scale(Q$PC1)
+Q$PC2 <- scale(Q$PC2)
+Q$PC3 <- scale(Q$PC3)
+Q$PC4 <- scale(Q$PC4)
 Q <- Q %>% dplyr::rename(group_leth = groupLeth)
 #Code groupLeth with controls as reference
 Q$group_leth_c <- factor(Q$group_leth, level = c("Controls", "Depressed", "Ideators", "LL_Attempters", "HL_Attempters"))
@@ -318,7 +327,7 @@ Q$Group_d <- factor(Q$Group, level = c("Depressed","Controls","Ideators", "Attem
 Q$Group_i <-factor(Q$Group, level = c("Ideators", "Controls", "Depressed", "Attempters"))
 #Fix duplicate trial entries; confirmed they are same with sum(Q$trial.x != Q$trial.y)
 Q$trial <- Q$trial.x 
-Q <- Q %>% select(-c(trial.x,trial.y))
+Q <- Q %>% dplyr::select(-c(trial.x,trial.y))
 #Filter out first 10 trials, if desired
 if (filter_first_10_trials==TRUE) {
   Q <- Q %>% filter(trial>10)
